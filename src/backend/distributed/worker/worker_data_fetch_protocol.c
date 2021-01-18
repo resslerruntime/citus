@@ -396,7 +396,7 @@ worker_apply_shard_ddl_command(PG_FUNCTION_ARGS)
 
 	/* extend names in ddl command and apply extended command */
 	RelayEventExtendNames(ddlCommandNode, schemaName, shardId);
-	CitusProcessUtility(ddlCommandNode, ddlCommand, PROCESS_UTILITY_TOPLEVEL, NULL,
+	CitusProcessUtility(ddlCommandNode, ddlCommand, PROCESS_UTILITY_QUERY, NULL,
 						None_Receiver, NULL);
 
 	PG_RETURN_VOID();
@@ -428,7 +428,7 @@ worker_apply_inter_shard_ddl_command(PG_FUNCTION_ARGS)
 	RelayEventExtendNamesForInterShardCommands(ddlCommandNode, leftShardId,
 											   leftShardSchemaName, rightShardId,
 											   rightShardSchemaName);
-	CitusProcessUtility(ddlCommandNode, ddlCommand, PROCESS_UTILITY_TOPLEVEL, NULL,
+	CitusProcessUtility(ddlCommandNode, ddlCommand, PROCESS_UTILITY_QUERY, NULL,
 						None_Receiver, NULL);
 
 	PG_RETURN_VOID();
@@ -461,7 +461,7 @@ worker_apply_sequence_command(PG_FUNCTION_ARGS)
 	}
 
 	/* run the CREATE SEQUENCE command */
-	CitusProcessUtility(commandNode, commandString, PROCESS_UTILITY_TOPLEVEL, NULL,
+	CitusProcessUtility(commandNode, commandString, PROCESS_UTILITY_QUERY, NULL,
 						None_Receiver, NULL);
 	CommandCounterIncrement();
 

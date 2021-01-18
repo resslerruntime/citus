@@ -116,7 +116,7 @@ worker_create_or_replace_object(PG_FUNCTION_ARGS)
 	}
 
 	/* apply create statement locally */
-	CitusProcessUtility(parseTree, sqlStatement, PROCESS_UTILITY_TOPLEVEL, NULL,
+	CitusProcessUtility(parseTree, sqlStatement, PROCESS_UTILITY_QUERY, NULL,
 						None_Receiver, NULL);
 
 	/* type has been created */

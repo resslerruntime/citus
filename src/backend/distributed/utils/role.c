@@ -41,7 +41,7 @@ alter_role_if_exists(PG_FUNCTION_ARGS)
 
 	Node *parseTree = ParseTreeNode(utilityQuery);
 
-	CitusProcessUtility(parseTree, utilityQuery, PROCESS_UTILITY_TOPLEVEL, NULL,
+	CitusProcessUtility(parseTree, utilityQuery, PROCESS_UTILITY_QUERY, NULL,
 						None_Receiver, NULL);
 
 	PG_RETURN_BOOL(true);
