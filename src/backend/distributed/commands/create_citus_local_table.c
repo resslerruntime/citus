@@ -71,17 +71,18 @@ static void InsertMetadataForCitusLocalTable(Oid citusLocalTableId, uint64 shard
 static void FinalizeCitusLocalTableCreation(Oid relationId);
 
 
+PG_FUNCTION_INFO_V1(citus_add_local_table_to_metadata);
 PG_FUNCTION_INFO_V1(create_citus_local_table);
 PG_FUNCTION_INFO_V1(remove_local_tables_from_metadata);
 
 
 /*
- * create_citus_local_table creates a citus local table from the table with
+ * citus_add_local_table_to_metadata creates a citus local table from the table with
  * relationId by executing the internal method CreateCitusLocalTable.
  * (See CreateCitusLocalTable function's comment.)
  */
 Datum
-create_citus_local_table(PG_FUNCTION_ARGS)
+citus_add_local_table_to_metadata(PG_FUNCTION_ARGS)
 {
 	CheckCitusVersion(ERROR);
 
@@ -108,6 +109,17 @@ create_citus_local_table(PG_FUNCTION_ARGS)
 	CreateCitusLocalTable(relationId, cascadeViaForeignKeys);
 
 	PG_RETURN_VOID();
+}
+
+
+/*
+ * create_citus_local_table is a wrapper function for old name of
+ * of citus_add_local_table_to_metadata.
+ */
+Datum
+create_citus_local_table(PG_FUNCTION_ARGS)
+{
+	return citus_add_local_table_to_metadata(fcinfo);
 }
 
 
@@ -150,7 +162,7 @@ CreateCitusLocalTable(Oid relationId, bool cascadeViaForeignKeys)
 	EnsureCoordinator();
 	EnsureTableOwner(relationId);
 
-	/* enable create_citus_local_table on an empty node */
+	/* enable citus_add_local_table_to_metadata on an empty node */
 	InsertCoordinatorIfClusterEmpty();
 
 	/*
@@ -191,7 +203,7 @@ CreateCitusLocalTable(Oid relationId, bool cascadeViaForeignKeys)
 		 * on the relations.
 		 */
 		CascadeOperationForConnectedRelations(relationId, lockMode,
-											  CASCADE_FKEY_CREATE_CITUS_LOCAL_TABLE);
+											  CASCADE_FKEY_ADD_LOCAL_TABLE_TO_METADATA);
 
 		/*
 		 * We converted every foreign key connected table in our subgraph
@@ -213,7 +225,7 @@ CreateCitusLocalTable(Oid relationId, bool cascadeViaForeignKeys)
 						errhint("Use cascade_via_foreign_keys option to convert "
 								"all the relations involved in a foreign key "
 								"relationship with %s to a citus local table by "
-								"executing SELECT create_citus_local_table($$%s$$, "
+								"executing SELECT citus_add_local_table_to_metadata($$%s$$, "
 								"cascade_via_foreign_keys=>true)",
 								qualifiedRelationName, qualifiedRelationName)));
 	}
@@ -298,7 +310,7 @@ ErrorIfUnsupportedCreateCitusLocalTable(Relation relation)
 	 * EnsureTableNotDistributed already errors out if the given relation implies
 	 * a citus table. However, as we don't mark the relation as citus table, i.e we
 	 * do not use the relation with relationId as the shell relation, parallel
-	 * create_citus_local_table executions would not error out for that relation.
+	 * citus_add_local_table_to_metadata executions would not error out for that relation.
 	 * Hence we need to error out for shard relations too.
 	 */
 	ErrorIfRelationIsAKnownShard(relationId);
