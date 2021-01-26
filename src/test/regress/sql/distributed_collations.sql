@@ -34,6 +34,7 @@ SELECT create_distributed_table('test_propagate', 'id');
 -- Test COLLATE is pushed down
 SELECT * FROM collation_tests.test_propagate WHERE t2 < 'b';
 SELECT * FROM collation_tests.test_propagate WHERE t2 < 'b' COLLATE "C";
+SELECT * FROM collation_tests.test_propagate WHERE t2 COLLATE "C" < 'b';
 
 -- Test range table with collated distribution column
 CREATE TABLE test_range(key text COLLATE german_phonebook, val int);
