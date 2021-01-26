@@ -4825,6 +4825,8 @@ get_rule_expr(Node *node, deparse_context *context,
 	CHECK_FOR_INTERRUPTS();
 	check_stack_depth();
 
+	node = RelabelTypeMutator(node);
+
 	/*
 	 * Each level of get_rule_expr must emit an indivisible term
 	 * (parenthesized if necessary) to ensure result is reparsed into the same
