@@ -4881,8 +4881,6 @@ get_rule_expr(Node *node, deparse_context *context,
 	CHECK_FOR_INTERRUPTS();
 	check_stack_depth();
 
-	node = RelabelTypeMutator(node);
-
 	/*
 	 * Each level of get_rule_expr must emit an indivisible term
 	 * (parenthesized if necessary) to ensure result is reparsed into the same
@@ -5236,27 +5234,6 @@ get_rule_expr(Node *node, deparse_context *context,
 			}
 			break;
 
-		case T_RelabelType:
-			{
-				RelabelType *relabel = (RelabelType *) node;
-				Node	   *arg = (Node *) relabel->arg;
-
-				if (relabel->relabelformat == COERCE_IMPLICIT_CAST &&
-					!showimplicit)
-				{
-					/* don't show the implicit cast */
-					get_rule_expr_paren(arg, context, false, node);
-				}
-				else
-				{
-					get_coercion_expr(arg, context,
-									  relabel->resulttype,
-									  relabel->resulttypmod,
-									  node);
-				}
-			}
-			break;
-
 		case T_CoerceViaIO:
 			{
 				CoerceViaIO *iocoerce = (CoerceViaIO *) node;
@@ -5319,8 +5296,10 @@ get_rule_expr(Node *node, deparse_context *context,
 			}
 			break;
 
+		case T_RelabelType:
 		case T_CollateExpr:
 			{
+				node = RelabelTypeMutator(node);
 				CollateExpr *collate = (CollateExpr *) node;
 				Node	   *arg = (Node *) collate->arg;
 
