@@ -63,6 +63,7 @@ SELECT * FROM collation_tests.test_propagate WHERE t2 COLLATE "C" < 'b';
 (1 row)
 
 -- Test COLLATE is pushed down with aggregate function
+SET citus.next_shard_id TO 20060000;
 CREATE TABLE test_collate_pushed_down_aggregate (a int, b int);
 SELECT create_distributed_table('test_collate_pushed_down_aggregate', 'a');
  create_distributed_table
@@ -83,9 +84,9 @@ NOTICE:  Renaming the new table to collation_tests.test_collate_pushed_down_aggr
 SET citus.log_remote_commands TO true;
 SELECT ALL MIN((lower(CAST(test_collate_pushed_down_aggregate.a AS VARCHAR)) COLLATE "C"))
     FROM ONLY test_collate_pushed_down_aggregate;
-NOTICE:  issuing SELECT min((lower(((a)::character varying COLLATE "default")) COLLATE "C")) AS min FROM collation_tests.test_collate_pushed_down_aggregate_1410064 test_collate_pushed_down_aggregate WHERE true
+NOTICE:  issuing SELECT min((lower(((a)::character varying COLLATE "default")) COLLATE "C")) AS min FROM collation_tests.test_collate_pushed_down_aggregate_20060004 test_collate_pushed_down_aggregate WHERE true
 DETAIL:  on server postgres@localhost:xxxxx connectionId: xxxxxxx
-NOTICE:  issuing SELECT min((lower(((a)::character varying COLLATE "default")) COLLATE "C")) AS min FROM collation_tests.test_collate_pushed_down_aggregate_1410065 test_collate_pushed_down_aggregate WHERE true
+NOTICE:  issuing SELECT min((lower(((a)::character varying COLLATE "default")) COLLATE "C")) AS min FROM collation_tests.test_collate_pushed_down_aggregate_20060005 test_collate_pushed_down_aggregate WHERE true
 DETAIL:  on server postgres@localhost:xxxxx connectionId: xxxxxxx
  min
 ---------------------------------------------------------------------
