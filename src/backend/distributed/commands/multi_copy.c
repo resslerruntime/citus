@@ -2076,11 +2076,13 @@ CreateCitusCopyDestReceiver(Oid tableId, List *columnNameList, int partitionColu
 
 
 /*
- * ShouldExecuteCopyLocally returns true if the current copy
- * operation should be done locally for local placements.
+ * LocalCopyAllowed returns true if executing copy locally
+ * is possible. Note that return value of this function is
+ * just a prerequisite for executing copy locally, not the
+ * decision itself.
  */
 static bool
-ShouldExecuteCopyLocally(bool isIntermediateResult)
+LocalCopyAllowed(bool isIntermediateResult)
 {
 	if (!EnableLocalExecution)
 	{
@@ -2097,6 +2099,17 @@ ShouldExecuteCopyLocally(bool isIntermediateResult)
 		return false;
 	}
 
+	return GetCurrentLocalExecutionStatus() != LOCAL_EXECUTION_DISABLED;
+}
+
+
+/*
+ * ShouldExecuteCopyLocally returns true if the current copy
+ * operation should be done locally for local placements.
+ */
+static bool
+ShouldExecuteCopyLocally(bool isIntermediateResult)
+{
 	if (GetCurrentLocalExecutionStatus() == LOCAL_EXECUTION_REQUIRED)
 	{
 		/*
@@ -2118,10 +2131,24 @@ ShouldExecuteCopyLocally(bool isIntermediateResult)
 
 		return true;
 	}
+	else if (IsMultiStatementTransaction())
+	{
+		return true;
+	}
 
-	/* if we connected to the localhost via a connection, we might not be able to see some previous changes that are done via the connection */
-	return GetCurrentLocalExecutionStatus() != LOCAL_EXECUTION_DISABLED &&
-		   IsMultiStatementTransaction();
+	/*
+	 * If we can reserve a connection, we should go ahead with
+	 * remote execution.
+	 *
+	 * NB: It is not advantageous to use remote execution just with a
+	 * single remote connection. In other words, a single remote connection
+	 * would not perform better than local execution. However, we prefer to
+	 * do this because it is likely that the COPY would get more connections
+	 * to parallelize the operation. In the future, we might relax this
+	 * requirement and failover to local execution as on connection attempt
+	 * failures as the executor does.
+	 */
+	return !TryConnectionPossibilityForLocalPrimaryNode();
 }
 
 
@@ -2136,8 +2163,6 @@ CitusCopyDestReceiverStartup(DestReceiver *dest, int operation,
 {
 	CitusCopyDestReceiver *copyDest = (CitusCopyDestReceiver *) dest;
 
-	bool isIntermediateResult = copyDest->intermediateResultIdPrefix != NULL;
-	copyDest->shouldUseLocalCopy = ShouldExecuteCopyLocally(isIntermediateResult);
 	Oid tableId = copyDest->distributedRelationId;
 
 	char *relationName = get_rel_name(tableId);
@@ -2291,13 +2316,19 @@ CitusCopyDestReceiverStartup(DestReceiver *dest, int operation,
 	RecordRelationAccessIfNonDistTable(tableId, PLACEMENT_ACCESS_DML);
 
 	/*
-	 * For all the primary (e.g., writable) nodes, reserve a shared connection.
-	 * We do this upfront because we cannot know which nodes are going to be
-	 * accessed. Since the order of the reservation is important, we need to
-	 * do it right here. For the details on why the order important, see
-	 * the function.
+	 * For all the primary (e.g., writable) remote nodes, reserve a shared
+	 * connection. We do this upfront because we cannot know which nodes
+	 * are going to be accessed. Since the order of the reservation is
+	 * important, we need to do it right here. For the details on why the
+	 * order important, see the function.
 	 */
-	EnsureConnectionPossibilityForPrimaryNodes();
+	EnsureConnectionPossibilityForRemotePrimaryNodes();
+
+	bool isIntermediateResult = copyDest->intermediateResultIdPrefix != NULL;
+	if (LocalCopyAllowed(isIntermediateResult))
+	{
+		copyDest->shouldUseLocalCopy = ShouldExecuteCopyLocally(isIntermediateResult);
+	}
 }
 
 
@@ -3424,6 +3455,7 @@ InitializeCopyShardState(CopyShardState *shardState,
 			continue;
 		}
 
+
 		if (placement->groupId == GetLocalGroupId())
 		{
 			/*
@@ -3444,7 +3476,6 @@ InitializeCopyShardState(CopyShardState *shardState,
 			failedPlacementCount++;
 			continue;
 		}
-
 
 		CopyConnectionState *connectionState = GetConnectionState(connectionStateHash,
 																  connection);
